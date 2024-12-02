@@ -5,14 +5,16 @@ The server uses a new structure for sending and receiving data which goes like s
 
 <h2>Handshake</h2> When connecting for the first time the client will send additional info
 using headers, like the minecraft username in the `username: <username>` field of the header. The server
-will put the username, along with the web socket and generated 32 character long key, and it will send the 
+will put the username, along with the web socket and generated 32 character long key, and it will send the
 key back to the client for following requests.
 The full header looks like this:
+
 ```
 username: <username>
 ```
 
 <h2>Client-side requests</h2> The client will always use the following format:
+
 ```
 key: <32 char long key>
 type: "STATUS" or "PARTY" // Depending on the operation the client wants to execute.
@@ -25,8 +27,10 @@ body: {
       <additional data> like a username or message
 }
 ```
+
 <h2>Server-side responses</h2> In the case of an error, the server will send a response looking like this
 one:
+
 ```
 header: "ERROR" or "SUCCESS"
 code: <Any error code other than 0 will be interpreted by the client> or "0" for success
@@ -44,6 +48,7 @@ body: {
 ```
 
 Party updates look like so:
+
 ```
 header: "SUCCESS"
 code: "0"
@@ -61,7 +66,9 @@ body: {
     // demoted, chatting
 }
 ```
+
 <h2>Errors</h2> The list of errors that the client can receive.
+
 ```
 0: SUCCESS
 
@@ -79,8 +86,10 @@ body: {
 10: SELF_DEMOTE
 11: BAD_MESSAGE
 ```
+
 <h2>Party codes</h2> The list of commands the client can
 receive when a party command happens:
+
 ```
 CLIENT_INVITED
 CLIENT_KICK

@@ -1,7 +1,7 @@
-import { Payload } from "./utils";
-import WebSocket from "ws";
-import { MflpClient } from "./Client";
-import { WebsocketSender } from "./WebsocketSender";
+import {Payload} from "./utils"
+import WebSocket from "ws"
+import {MflpClient} from "./Client"
+import {WebsocketWriter} from "./WebsocketWriter"
 
 interface StatusBody {
     cmd: string;
@@ -9,19 +9,19 @@ interface StatusBody {
 }
 
 function printAdded(username: string) {
-    console.log("\x1b[32mClient joined: " + username);
+    console.log("\x1b[32mClient joined: " + username)
 }
 
 function printRemoved(username: string) {
-    console.log("\x1b[31mClient left: " + username);
+    console.log("\x1b[31mClient left: " + username)
 }
 
 export function handleStatus(payload: Payload, ws: WebSocket, websocketServer: WebSocket.Server,
-                             connectedClients: Array<MflpClient>, sender: WebsocketSender) {
-    const body: StatusBody = payload.body as StatusBody;
+                             connectedClients: Array<MflpClient>, sender: WebsocketWriter) {
+    const body: StatusBody = payload.body as StatusBody
 
-    const cmd: string = body.cmd;
-    const username: string = body.username;
+    const cmd: string = body.cmd
+    const username: string = body.username
 
     switch (cmd) {
         case "CLIENT_JOIN":
@@ -32,12 +32,12 @@ export function handleStatus(payload: Payload, ws: WebSocket, websocketServer: W
                     type: "STATUS",
                     body: {
                         cmd: "CLIENT_JOIN",
-                        client: username
-                    }
-                }));
-            });
-            printAdded(username);
-            return;
+                        client: username,
+                    },
+                }))
+            })
+            printAdded(username)
+            return
         case "CLIENT_PART":
             websocketServer.clients.forEach((client) => {
                 client.send(JSON.stringify({
@@ -46,12 +46,12 @@ export function handleStatus(payload: Payload, ws: WebSocket, websocketServer: W
                     type: "STATUS",
                     body: {
                         cmd: "CLIENT_PART",
-                        client: username
-                    }
-                }));
+                        client: username,
+                    },
+                }))
             })
-            printRemoved(username);
-            return;
+            printRemoved(username)
+            return
         case "REQUEST_LIST":
             sender.sendToSocket(ws, JSON.stringify({
                 header: "SUCCESS",
@@ -59,15 +59,15 @@ export function handleStatus(payload: Payload, ws: WebSocket, websocketServer: W
                 type: "STATUS",
                 body: {
                     cmd: "REQUEST_LIST",
-                    clients: connectedClients.map(client => client.username)
-                }
-            }));
-            return;
+                    clients: connectedClients.map(client => client.username),
+                },
+            }))
+            return
     }
     sender.sendToSocket(ws, JSON.stringify({
         header: "ERROR",
         code: "1",
         type: "STATUS",
-        body: {}
+        body: {},
     }))
 }

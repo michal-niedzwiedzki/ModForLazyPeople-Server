@@ -10,73 +10,84 @@
  */
 
 // Imports
-import WebSocket from 'ws';
-import { getClientByWebsocket, generateKey, isValidKey, MflpError, Payload } from "./utils";
-import { handleStatus } from "./statusHandler";
-import { handleParty } from "./partyHandler";
-import { MflpClient } from "./Client";
-import { WebsocketSender } from "./WebsocketSender";
+import WebSocket from "ws"
+import {getClientByWebsocket, generateKey, isValidKey, MflpError} from "./utils"
+import {handleStatus} from "./statusHandler"
+import {handleParty, Party} from "./partyHandler"
+import {MflpClient} from "./Client"
+import {WebsocketWriter} from "./WebsocketWriter"
+import {CommandRegistry} from "./commands/CommandRegistry"
+import {InviteClientCommand} from "./commands/InviteClientCommand"
+import {ClientJoinCommand} from "./commands/ClientJoinCommand"
+import {Payload} from "./commands/Command"
+import {ClientLeaveCommand} from "./commands/ClientLeaveCommand"
+import {AcceptClientCommand} from "./commands/AcceptClientCommand"
 
-const websocketServer = new WebSocket.Server({ port: 8080 });
+const websocketServer = new WebSocket.Server({port: 8080})
 let connectedClients: Array<MflpClient> = []
+let parties: Array<Party> = []
+const partyMap: Map<MflpClient, Party> = new Map<MflpClient, Party>()
+const pendingInvites: Map<MflpClient, Party> = new Map<MflpClient, Party>()
 
-const sender: WebsocketSender = new WebsocketSender();
+const writer: WebsocketWriter = new WebsocketWriter()
 
-console.log("Starting WebSocket Server.");
+const registry = new CommandRegistry()
+registry.add(new ClientJoinCommand())
+registry.add(new InviteClientCommand(connectedClients, partyMap, pendingInvites, parties))
+registry.add(new ClientLeaveCommand(connectedClients, partyMap, pendingInvites, parties))
+registry.add(new AcceptClientCommand(connectedClients, partyMap, pendingInvites, parties))
+
+console.log("Starting WebSocket Server.")
 
 function clientHandshake(ws: WebSocket, username: string) {
-    const generatedKey = generateKey(32);
-    const client: MflpClient = { key: generatedKey, ws: ws, username: username } as MflpClient;
+    const generatedKey = generateKey(32)
+    const client: MflpClient = {key: generatedKey, ws: ws, username: username} as MflpClient
 
     connectedClients.push(client)
-    sender.sendToSocket(client.ws, JSON.stringify(generatedKey));
+    writer.sendToSocket(client.ws, JSON.stringify(generatedKey))
 }
 
 function partClient(clientWs: WebSocket) {
     const client: MflpClient | undefined = getClientByWebsocket(connectedClients, clientWs)
     if (client) {
-        connectedClients = connectedClients.filter(c => c !== client);
+        connectedClients = connectedClients.filter(c => c !== client)
     } else {
-        new MflpError("Could not find client for disconnecting websocket.");
+        new MflpError("Could not find client for disconnecting websocket.")
     }
 }
 
-websocketServer.on('connection', (ws, request) => {
-    const usernameJson = request.headers['username'];
+websocketServer.on("connection", (ws, request) => {
+    const usernameJson = request.headers["username"]
 
     if (usernameJson) {
         try {
-            const usernameJsonData = JSON.parse(Array.isArray(usernameJson) ? usernameJson[0] : usernameJson);
-            clientHandshake(ws, usernameJsonData.username);
+            const usernameJsonData = JSON.parse(Array.isArray(usernameJson) ? usernameJson[0] : usernameJson)
+            clientHandshake(ws, usernameJsonData.username)
         } catch (err) {
-            new MflpError("Invalid json data in handshake!");
-            return;
+            new MflpError("Invalid json data in handshake!")
+            ws.close(401)
+            return
         }
     } else {
-        new MflpError("No Json data in handshake!");
-        return;
+        new MflpError("No Json data in handshake!")
+        ws.close(401)
+        return
     }
 
-    ws.on('message', (message: string) => {
-        const payload: Payload = JSON.parse(message);
+    ws.on("message", (message: string) => {
+        const payload: Payload = JSON.parse(message)
 
         if (isValidKey(connectedClients, payload.clientKey)) {
-            new MflpError("Invalid client key.");
-            sender.sendToSocket(ws, "Invalid key.");
-            return;
+            new MflpError("Invalid client key.")
+            writer.sendToSocket(ws, "Invalid key.")
+            return
         }
 
-        switch (payload.type) {
-            case "STATUS":
-                handleStatus(payload, ws, websocketServer, connectedClients, sender);
-                break;
-            case "PARTY":
-                handleParty(payload, ws, connectedClients, sender);
-                break;
-        }
+        const command = registry.retrieve(payload)
+        if (command) command.handle(payload, ws, writer)
     })
-    ws.on('close', () => {
-        partClient(ws);
+    ws.on("close", () => {
+        partClient(ws)
     })
 })
 
