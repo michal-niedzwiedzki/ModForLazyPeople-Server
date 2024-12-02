@@ -11,52 +11,67 @@
 
 // Imports
 import WebSocket from 'ws';
-import {findKeyForEntry, generateKey, KeylessPayload, MflpError, Payload} from "./utils";
+import { getClientByWebsocket, generateKey, isValidKey, MflpError, Payload } from "./utils";
 import { handleStatus } from "./statusHandler";
 import { handleParty } from "./partyHandler";
+import { MflpClient } from "./Client";
+import { WebsocketSender } from "./WebsocketSender";
 
-export const websocketServer = new WebSocket.Server({ port: 8080 });
-export const socketPerKeyMap = new Map<string, WebSocket>(); // KEY, Socket
-export const usernamePerKeyMap = new Map<string, string>(); // KEY, Username
+const websocketServer = new WebSocket.Server({ port: 8080 });
+let connectedClients: Array<MflpClient> = []
+
+const sender: WebsocketSender = new WebsocketSender();
 
 console.log("Starting WebSocket Server.");
 
-function clientHandshake(client: WebSocket) {
+function clientHandshake(ws: WebSocket, username: string) {
     const generatedKey = generateKey(32);
-    socketPerKeyMap.set(generatedKey, client);
+    const client: MflpClient = { key: generatedKey, ws: ws, username: username } as MflpClient;
 
-    client.send(JSON.stringify(generatedKey));
+    connectedClients.push(client)
+    sender.sendToSocket(client.ws, JSON.stringify(generatedKey));
 }
 
-function partClient(client: WebSocket) {
-    const key: string = findKeyForEntry(socketPerKeyMap, client);
-    if (key) {
-        socketPerKeyMap.delete(key);
+function partClient(clientWs: WebSocket) {
+    const client: MflpClient | undefined = getClientByWebsocket(connectedClients, clientWs)
+    if (client) {
+        connectedClients = connectedClients.filter(c => c !== client);
     } else {
-        new MflpError("Could not find key for disconnecting websocket.");
+        new MflpError("Could not find client for disconnecting websocket.");
     }
 }
 
-websocketServer.on('connection', (ws) => {
-    clientHandshake(ws);
+websocketServer.on('connection', (ws, request) => {
+    const usernameJson = request.headers['username'];
+
+    if (usernameJson) {
+        try {
+            const usernameJsonData = JSON.parse(Array.isArray(usernameJson) ? usernameJson[0] : usernameJson);
+            clientHandshake(ws, usernameJsonData.username);
+        } catch (err) {
+            new MflpError("Invalid json data in handshake!");
+            return;
+        }
+    } else {
+        new MflpError("No Json data in handshake!");
+        return;
+    }
 
     ws.on('message', (message: string) => {
         const payload: Payload = JSON.parse(message);
-        const keylessPayload: KeylessPayload = { minecraftId: payload.minecraftId, type: payload.type, body: payload.body };
 
-        if (!socketPerKeyMap.has(payload.clientKey)) {
+        if (isValidKey(connectedClients, payload.clientKey)) {
             new MflpError("Invalid client key.");
-            ws.send("Invalid key.");
+            sender.sendToSocket(ws, "Invalid key.");
             return;
         }
 
         switch (payload.type) {
             case "STATUS":
-                // @ts-ignore
-                handleStatus(payload, ws);
+                handleStatus(payload, ws, websocketServer, connectedClients, sender);
                 break;
             case "PARTY":
-                handleParty(payload, keylessPayload);
+                handleParty(payload, ws, connectedClients, sender);
                 break;
         }
     })

@@ -1,0 +1,50 @@
+.login-container {
+    width: 350px;
+    padding: 20px;
+    background-color: white;
+    border: 2px solid #3498db; /* Border styling */
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    text-align: center;
+}
+
+.login-container p {
+    text-align: left;
+}
+
+.login-container h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.login-container input {
+    text-align: left;
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.login-container input:focus {
+    border-color: #3498db; /* Highlighted border */
+    outline: none;
+}
+
+.login-container button {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.login-container button:hover {
+    background-color: #2b7ebd;
+}

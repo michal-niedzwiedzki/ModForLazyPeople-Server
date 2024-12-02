@@ -1,0 +1,14 @@
+a {
+  text-decoration: none;
+  color: black;
+  transition: transform 0.3s ease;
+}
+
+a:hover {
+  transform: scale(1.2);
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+}

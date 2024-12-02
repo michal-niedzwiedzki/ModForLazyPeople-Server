@@ -1,5 +1,7 @@
-import {getAllEntries, Payload} from "./utils";
-import {usernamePerKeyMap, websocketServer} from "./index";
+import { Payload } from "./utils";
+import WebSocket from "ws";
+import { MflpClient } from "./Client";
+import { WebsocketSender } from "./WebsocketSender";
 
 interface StatusBody {
     cmd: string;
@@ -14,8 +16,8 @@ function printRemoved(username: string) {
     console.log("\x1b[31mClient left: " + username);
 }
 
-export function handleStatus(payload: Payload, ws: WebSocket) {
-    const key: string = payload.clientKey;
+export function handleStatus(payload: Payload, ws: WebSocket, websocketServer: WebSocket.Server,
+                             connectedClients: Array<MflpClient>, sender: WebsocketSender) {
     const body: StatusBody = payload.body as StatusBody;
 
     const cmd: string = body.cmd;
@@ -23,9 +25,8 @@ export function handleStatus(payload: Payload, ws: WebSocket) {
 
     switch (cmd) {
         case "CLIENT_JOIN":
-            usernamePerKeyMap.set(key, username);
-            websocketServer.clients.forEach((client) => {
-                client.send(JSON.stringify({
+            websocketServer.clients.forEach((socket: WebSocket) => {
+                socket.send(JSON.stringify({
                     header: "SUCCESS",
                     code: "0",
                     type: "STATUS",
@@ -38,7 +39,6 @@ export function handleStatus(payload: Payload, ws: WebSocket) {
             printAdded(username);
             return;
         case "CLIENT_PART":
-            usernamePerKeyMap.delete(key);
             websocketServer.clients.forEach((client) => {
                 client.send(JSON.stringify({
                     header: "SUCCESS",
@@ -53,18 +53,18 @@ export function handleStatus(payload: Payload, ws: WebSocket) {
             printRemoved(username);
             return;
         case "REQUEST_LIST":
-            ws.send(JSON.stringify({
+            sender.sendToSocket(ws, JSON.stringify({
                 header: "SUCCESS",
                 code: "0",
                 type: "STATUS",
                 body: {
                     cmd: "REQUEST_LIST",
-                    clients: getAllEntries(usernamePerKeyMap)
+                    clients: connectedClients.map(client => client.username)
                 }
             }));
             return;
     }
-    ws.send(JSON.stringify({
+    sender.sendToSocket(ws, JSON.stringify({
         header: "ERROR",
         code: "1",
         type: "STATUS",
