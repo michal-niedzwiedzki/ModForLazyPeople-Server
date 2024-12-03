@@ -31,11 +31,11 @@ function decline(executor: MflpClient, writer: WebsocketWriter) {
         const party: Party | undefined = pendingInvites.get(executor)
 
         if (partyMap.has(executor)) {
-            writer.sendError("9", executor.ws)
+            writer.error("9", executor.ws)
             return
         }
         if (!party) {
-            writer.sendError("8", executor.ws)
+            writer.error("8", executor.ws)
             return
         }
 
@@ -58,7 +58,7 @@ function decline(executor: MflpClient, writer: WebsocketWriter) {
 
         pendingInvites.delete(executor)
     } else {
-        writer.sendError("7", executor.ws)
+        writer.error("7", executor.ws)
     }
 }
 
@@ -93,7 +93,7 @@ function kick(user: MflpClient, executor: MflpClient, sender: WebsocketWriter) {
                 })
 
                 sender.broadcastToParty(executorParty, data)
-                sender.sendToSocket(user.ws, JSON.stringify({
+                sender.send(user.ws, JSON.stringify({
                     header: "SUCCESS",
                     code: "0",
                     type: "PARTY",
@@ -102,21 +102,21 @@ function kick(user: MflpClient, executor: MflpClient, sender: WebsocketWriter) {
                     },
                 }))
             } else {
-                sender.sendError("4", executor.ws)
+                sender.error("4", executor.ws)
             }
         } else {
-            sender.sendError("8", executor.ws)
+            sender.error("8", executor.ws)
             return
         }
     } else {
-        sender.sendError("6", executor.ws)
+        sender.error("6", executor.ws)
         return
     }
 }
 
 function promote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter) {
     if (!(partyMap.has(user) && partyMap.has(executor))) {
-        sender.sendError("6", executor.ws)
+        sender.error("6", executor.ws)
         return
     }
 
@@ -124,12 +124,12 @@ function promote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter
     const party: Party = partyMap.get(executor) as Party
 
     if (userParty !== party) {
-        sender.sendError("8", executor.ws)
+        sender.error("8", executor.ws)
         return
     }
 
     if (getClientPermissionLevel(executor, party) == 2) {
-        sender.sendError("4", executor.ws)
+        sender.error("4", executor.ws)
         return
     }
 
@@ -162,7 +162,7 @@ function promote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter
 
 function demote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter) {
     if (!(partyMap.has(user) && partyMap.has(executor))) {
-        sender.sendError("6", executor.ws)
+        sender.error("6", executor.ws)
         return
     }
 
@@ -170,12 +170,12 @@ function demote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter)
     const party: Party = partyMap.get(executor) as Party
 
     if (userParty !== party) {
-        sender.sendError("8", executor.ws)
+        sender.error("8", executor.ws)
         return
     }
 
     if (getClientPermissionLevel(executor, party) == 2) {
-        sender.sendError("4", executor.ws)
+        sender.error("4", executor.ws)
         return
     }
 
@@ -204,7 +204,7 @@ function demote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter)
 
 function chat(executor: MflpClient, message: string, sender: WebsocketWriter) {
     if (!partyMap.has(executor)) {
-        sender.sendError("6", executor.ws)
+        sender.error("6", executor.ws)
         return
     }
 
@@ -240,7 +240,7 @@ export function handleParty(payload: Payload, ws: WebSocket, connectedClients: A
             break
         case "KICK":
             if (!user) {
-                writer.sendError("2", ws)
+                writer.error("2", ws)
                 return
             }
 
@@ -248,7 +248,7 @@ export function handleParty(payload: Payload, ws: WebSocket, connectedClients: A
             break
         case "PROMOTE":
             if (!user) {
-                writer.sendError("2", ws)
+                writer.error("2", ws)
                 return
             }
 
@@ -256,11 +256,11 @@ export function handleParty(payload: Payload, ws: WebSocket, connectedClients: A
             break
         case "DEMOTE":
             if (!user) {
-                writer.sendError("2", ws)
+                writer.error("2", ws)
                 return
             }
             if (user == executor) {
-                writer.sendError("10", ws) // send self invite error
+                writer.error("10", ws) // send self invite error
                 return
             }
 
@@ -268,14 +268,14 @@ export function handleParty(payload: Payload, ws: WebSocket, connectedClients: A
             break
         case "CHAT":
             if (!message) {
-                writer.sendError("11", ws)
+                writer.error("11", ws)
                 return
             }
 
             chat(executor, message, writer)
             break
         default:
-            writer.sendError("1", ws)
+            writer.error("1", ws)
             return
     }
 }

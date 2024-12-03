@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@types/ws": "^8.5.13",
+    "crypto": "^1.0.1"
+  }
+}

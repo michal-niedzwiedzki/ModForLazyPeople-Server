@@ -53,7 +53,7 @@ export function handleStatus(payload: Payload, ws: WebSocket, websocketServer: W
             printRemoved(username)
             return
         case "REQUEST_LIST":
-            sender.sendToSocket(ws, JSON.stringify({
+            sender.send(ws, JSON.stringify({
                 header: "SUCCESS",
                 code: "0",
                 type: "STATUS",
@@ -64,7 +64,7 @@ export function handleStatus(payload: Payload, ws: WebSocket, websocketServer: W
             }))
             return
     }
-    sender.sendToSocket(ws, JSON.stringify({
+    sender.send(ws, JSON.stringify({
         header: "ERROR",
         code: "1",
         type: "STATUS",
