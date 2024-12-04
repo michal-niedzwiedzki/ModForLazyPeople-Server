@@ -1,13 +1,9 @@
-import { MflpClient } from "../Client";
-import { Party } from "../partyHandler";
-import WebSocket from "ws";
-import { WebsocketWriter } from "../WebsocketWriter";
-import {
-  getClientPermissionLevel,
-} from "../utils";
-import { Command, Payload, Response } from "./Command";
-import { State } from "../server/State";
-import { Errors } from "../server/Errors";
+import WebSocket from "ws"
+
+import { Command } from "./Command";
+import { Client, Payload, Feedback } from "../client"
+import { Errors, State, Writer } from "../server";
+
 
 export class PartyInviteCommand extends Command {
 
@@ -19,7 +15,7 @@ export class PartyInviteCommand extends Command {
     payload: Payload,
     state: State,
     ws: WebSocket,
-    writer: WebsocketWriter
+    writer: Writer
   ): void {
     const user = state.getClientByUsername(payload.body?.user);
     if (!user) return writer.error(ws, Errors.INVALID_USER);
@@ -28,39 +24,29 @@ export class PartyInviteCommand extends Command {
     if (user == executor) return writer.error(ws, Errors.SELF_INVITE);
 
     const sendInviteSuccess = (party: Party) => {
-      this.pendingInvites.set(user, party);
       writer.send(
         user.ws,
-        new Response(payload, Errors.SUCCESS)
+        new Feedback(payload, Errors.SUCCESS)
       );
-      writer.broadcastToParty(party, new Response(payload, Errors.SUCCESS, {
+      writer.broadcastToParty(party, new Feedback(payload, Errors.SUCCESS, {
           cmd: "INVITE_SUCCESS",
           user: user.username,
       }))
     };
 
-    const sendInviteTimeout = (party: Party) => {
-      if (this.pendingInvites.has(user)) {
-        this.pendingInvites.delete(user);
-
-        writer.error("5", party.owner.ws);
-        party.moderators.forEach((moderator: MflpClient) =>
-          writer.error("5", moderator.ws)
-        );
-        party.players.forEach((player: MflpClient) =>
-          writer.error("5", player.ws)
-        );
-      }
-    };
-
     if (this.partyMap.has(user)) {
-      const party: Party | undefined = this.partyMap.get(user);
+      const part = this.partyMap.get(user);
 
       if (party) {
         const permissionLevel = getClientPermissionLevel(executor, party);
 
         if (permissionLevel > 0) {
-          sendInviteTimeout(party);
+          if (state.isUserInParty(user, party)) {
+            state.uninvite(user)
+            writer.error(party.owner.ws, Errors.INVITE_TIMEOUT)
+            party.moderators.forEach((moderator) => writer.error(moderator.ws, Errors.INVITE_TIMEOUT))
+            party.players.forEach((player) => writer.error(player.ws, Errors.INVITE_TIMEOUT))
+          }
           sendInviteSuccess(party);
         } else {
           writer.error("4", executor.ws);
@@ -71,11 +57,16 @@ export class PartyInviteCommand extends Command {
       const party: Party = {
         partyId: partyId,
         owner: executor,
-        moderators: new Array<MflpClient>(),
-        players: new Array<MflpClient>(),
+        moderators: new Array<Client>(),
+        players: new Array<Client>(),
       };
 
-      sendInviteTimeout(party);
+      if (state.isUserInParty(user, party)) {
+        state.uninvite(user)
+        writer.error(party.owner.ws, Errors.INVITE_TIMEOUT)
+        party.moderators.forEach((moderator) => writer.error(moderator.ws, Errors.INVITE_TIMEOUT))
+        party.players.forEach((player) => writer.error(player.ws, Errors.INVITE_TIMEOUT))
+      }
       sendInviteSuccess(party);
 
       this.parties.push(party);

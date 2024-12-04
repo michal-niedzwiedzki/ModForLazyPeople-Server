@@ -11,27 +11,20 @@
 
 // Imports
 import WebSocket from "ws"
-import { MflpClient } from "./Client";
-import { WebsocketWriter } from "./WebsocketWriter";
-import { CommandRegistry } from "./commands/CommandRegistry";
-import { PartyInviteCommand } from "./commands/PartyInviteCommand";
-import { StatusJoinCommand } from "./commands/StatusJoinCommand";
-import { Payload } from "./commands/Command";
-import { PartyLeaveCommand } from "./commands/PartyLeaveCommand";
-import { PartyAcceptCommand } from "./commands/PartyAcceptCommand";
-import { State } from "./server/State";
-import { Errors } from "./server/Errors";
+import { MflpClient, Payload } from "./client"
+import * as cmd from "./commands"
+import { Errors, State, Writer } from "./server"
 
-const server = new WebSocket.Server({ port: 8080 });
-const writer: WebsocketWriter = new WebsocketWriter(server);
+const server = new WebSocket.Server({ port: 8080 })
+const writer = new Writer(server)
 
 const state = new State()
 
-const registry = new CommandRegistry()
-  .add(new StatusJoinCommand())
-  .add(new PartyInviteCommand())
-  .add(new PartyLeaveCommand())
-  .add(new PartyAcceptCommand()
+const registry = new cmd.CommandRegistry()
+  .add(new cmd.StatusJoinCommand())
+  .add(new cmd.PartyInviteCommand())
+  .add(new cmd.PartyLeaveCommand())
+  .add(new cmd.PartyAcceptCommand()
 )
 
 function clientHandshake(ws: WebSocket, username: string) {
@@ -40,38 +33,32 @@ function clientHandshake(ws: WebSocket, username: string) {
     key: generatedKey,
     ws: ws,
     username: username,
-  } as MflpClient;
+  } as MflpClient
 
-  state.connect(client);
-  writer.send(client.ws, generatedKey);
+  state.connect(client)
+  writer.send(client.ws, generatedKey)
 }
 
 server.on("connection", (ws, request) => {
-  const username = request.headers["username"];
+  const username = request.headers["username"]
   if (!username) return ws.close(401) // No JSON data in handshake
 
   try {
     const usernameJsonData = JSON.parse(
       Array.isArray(username) ? username[0] : username
-    );
+    )
     clientHandshake(ws, usernameJsonData.username);
   } catch (err) {
-    return ws.close(401) // Invalid json data in handshake
+    return ws.close(401) // Invalid JSON data in handshake
   }
 
   ws.on("message", (message: string) => {
-    const payload: Payload = JSON.parse(message);
-
-    if (!state.isValidKey(payload.clientKey)) {
-      writer.error(ws, Errors.INVALID_CLIENT_KEY);
-      return;
-    }
+    const payload: Payload = JSON.parse(message)
+    if (!state.isValidKey(payload.clientKey)) return writer.error(ws, Errors.INVALID_CLIENT_KEY)
 
     const command = registry.retrieve(payload);
     if (command) command.handle(payload, state, ws, writer);
   });
 
-  ws.on("close", () => {
-    state.disconnect(ws);
-  });
-});
+  ws.on("close", () => state.disconnect(ws))
+})

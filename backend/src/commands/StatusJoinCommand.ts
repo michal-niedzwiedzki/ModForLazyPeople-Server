@@ -1,7 +1,9 @@
-import WebSocket from "ws";
-import { WebsocketWriter } from "../WebsocketWriter";
-import { Command, Payload } from "./Command";
-import { State } from "../server/State";
+import WebSocket from "ws"
+
+import { Command } from "./Command";
+import { Client, Payload, Feedback } from "../client"
+import { Errors, State, Writer } from "../server";
+
 
 export class StatusJoinCommand extends Command {
 
@@ -13,7 +15,7 @@ export class StatusJoinCommand extends Command {
     payload: Payload,
     state: State,
     ws: WebSocket,
-    writer: WebsocketWriter
+    writer: Writer
   ): void {
     writer.broadcastToAll(state, JSON.stringify({
           header: "SUCCESS",

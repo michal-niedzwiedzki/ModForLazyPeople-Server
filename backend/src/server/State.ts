@@ -1,13 +1,13 @@
-import { MflpClient } from "../Client"
+import { Client } from "../client/Client"
 import { Party } from "../partyHandler"
 import { randomBytes } from "crypto"
 import WebSocket from "ws"
 
 export class State {
-  private clients: Array<MflpClient> = []
+  private clients: Array<Client> = []
   private parties: Array<Party> = []
-  private partyMap: Map<MflpClient, Party> = new Map<MflpClient, Party>()
-  private invites: Map<MflpClient, Party> = new Map<MflpClient, Party>()
+  private partyMap: Map<Client, Party> = new Map<Client, Party>()
+  private invites: Map<Client, Party> = new Map<Client, Party>()
 
   public generateKey(length: number): string {
     return randomBytes(length).toString("hex")
@@ -17,7 +17,7 @@ export class State {
     return this.clients.some((client) => client.key === key)
   }
 
-  public connect(client: MflpClient): this {
+  public connect(client: Client): this {
     this.clients.push(client)
     return this
   }
@@ -28,23 +28,23 @@ export class State {
     return this
   }
 
-  public getClientByWebSocket(ws: WebSocket): MflpClient | undefined {
+  public getClientByWebSocket(ws: WebSocket): Client | undefined {
     return this.clients.find((client) => (client.ws === ws))
   }
 
-  public getClientByUsername(username: string | undefined): MflpClient | undefined {
+  public getClientByUsername(username: string | undefined): Client | undefined {
     return this.clients.find((client) => (client.username === username))
   }
 
-  public hasParty(client: MflpClient | undefined): boolean {
+  public hasParty(client: Client | undefined): boolean {
     return !!client && this.partyMap.has(client)
   }
 
-  public hasPendingInvite(client: MflpClient | undefined): boolean {
+  public hasPendingInvite(client: Client | undefined): boolean {
     return !!client && this.invites.has(client)
   }
 
-  public getInvitingParty(client: MflpClient | undefined) {
+  public getInvitingParty(client: Client | undefined) {
     if (!!client ) return this.invites.get(client)
     else return undefined
   }

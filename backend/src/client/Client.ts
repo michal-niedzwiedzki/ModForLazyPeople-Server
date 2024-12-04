@@ -1,6 +1,6 @@
 import WebSocket from "ws"
 
-export interface MflpClient {
+export interface Client {
     key: string,
     ws: WebSocket,
     username: string;

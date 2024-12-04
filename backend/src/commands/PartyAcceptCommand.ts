@@ -1,9 +1,8 @@
-import { MflpClient } from "../Client"
 import WebSocket from "ws"
-import { WebsocketWriter } from "../WebsocketWriter"
-import { Command, Payload } from "./Command";
-import { State } from "../server/State";
-import { Errors } from "../server/Errors";
+
+import { Command } from "./Command";
+import { Client, Payload, Feedback } from "../client"
+import { Errors, State, Writer } from "../server";
 
 export class PartyAcceptCommand extends Command {
 
@@ -15,7 +14,7 @@ export class PartyAcceptCommand extends Command {
     payload: Payload,
     state: State,
     ws: WebSocket,
-    writer: WebsocketWriter
+    writer: Writer
   ): void {
     const executor = state.getClientByWebSocket(ws);
     if (!state.hasParty(executor)) return writer.error(executor!.ws, Errors.ALREADY_IN_PARTY);
@@ -35,9 +34,9 @@ export class PartyAcceptCommand extends Command {
         party: {
           owner: party.owner.username,
           moderators: party.moderators.map(
-            (moderator: MflpClient) => moderator.username
+            (moderator: Client) => moderator.username
           ),
-          players: party.players.map((player: MflpClient) => player.username),
+          players: party.players.map((player: Client) => player.username),
         },
         joining_player: executor.username,
       },

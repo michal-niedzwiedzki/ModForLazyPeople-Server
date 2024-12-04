@@ -6,12 +6,12 @@ import {
     Payload,
 } from "./utils"
 import WebSocket from "ws"
-import {MflpClient} from "./Client"
-import {WebsocketWriter} from "./WebsocketWriter"
+import {Client} from "./client/Client"
+import {Writer} from "./server/Writer"
 
 let parties: Array<Party> = []
-const partyMap: Map<MflpClient, Party> = new Map<MflpClient, Party>()
-const pendingInvites: Map<MflpClient, Party> = new Map<MflpClient, Party>()
+const partyMap: Map<Client, Party> = new Map<Client, Party>()
+const pendingInvites: Map<Client, Party> = new Map<Client, Party>()
 
 interface PartyBody {
     cmd: string;
@@ -21,12 +21,12 @@ interface PartyBody {
 
 export interface Party {
     partyId: string; // 16 chars long hexadecimal string
-    owner: MflpClient;
-    moderators: Array<MflpClient>;
-    players: Array<MflpClient>;
+    owner: Client;
+    moderators: Array<Client>;
+    players: Array<Client>;
 }
 
-function decline(executor: MflpClient, writer: WebsocketWriter) {
+function decline(executor: Client, writer: Writer) {
     if (pendingInvites.has(executor)) {
         const party: Party | undefined = pendingInvites.get(executor)
 
@@ -47,8 +47,8 @@ function decline(executor: MflpClient, writer: WebsocketWriter) {
                 cmd: "PLAYER_DECLINE",
                 party: {
                     owner: party.owner.username,
-                    moderators: party.moderators.map((moderator: MflpClient) => moderator.username),
-                    players: party.players.map((player: MflpClient) => player.username),
+                    moderators: party.moderators.map((moderator: Client) => moderator.username),
+                    players: party.players.map((player: Client) => player.username),
                 },
                 declining_player: executor.username,
             },
@@ -62,7 +62,7 @@ function decline(executor: MflpClient, writer: WebsocketWriter) {
     }
 }
 
-function kick(user: MflpClient, executor: MflpClient, sender: WebsocketWriter) {
+function kick(user: Client, executor: Client, sender: Writer) {
     function checkKickPermissions(party: Party): boolean {
         if (user == party.owner) return false
         if (party.moderators.includes(user) && executor == party.owner) return true
@@ -114,7 +114,7 @@ function kick(user: MflpClient, executor: MflpClient, sender: WebsocketWriter) {
     }
 }
 
-function promote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter) {
+function promote(user: Client, executor: Client, sender: Writer) {
     if (!(partyMap.has(user) && partyMap.has(executor))) {
         sender.error("6", executor.ws)
         return
@@ -160,7 +160,7 @@ function promote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter
     sender.broadcastToParty(party, data)
 }
 
-function demote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter) {
+function demote(user: Client, executor: Client, sender: Writer) {
     if (!(partyMap.has(user) && partyMap.has(executor))) {
         sender.error("6", executor.ws)
         return
@@ -202,7 +202,7 @@ function demote(user: MflpClient, executor: MflpClient, sender: WebsocketWriter)
     sender.broadcastToParty(party, data)
 }
 
-function chat(executor: MflpClient, message: string, sender: WebsocketWriter) {
+function chat(executor: Client, message: string, sender: Writer) {
     if (!partyMap.has(executor)) {
         sender.error("6", executor.ws)
         return
@@ -222,13 +222,13 @@ function chat(executor: MflpClient, message: string, sender: WebsocketWriter) {
     sender.broadcastToParty(partyMap.get(executor) as Party, data)
 }
 
-export function handleParty(payload: Payload, ws: WebSocket, connectedClients: Array<MflpClient>,
-                            writer: WebsocketWriter) {
+export function handleParty(payload: Payload, ws: WebSocket, connectedClients: Array<Client>,
+                            writer: Writer) {
     const body: PartyBody = payload.body as PartyBody
 
     const cmd: string = body.cmd
-    const user: MflpClient | undefined = getClientByUsername(connectedClients, body.user)
-    const executor: MflpClient = getClientByWebsocket(connectedClients, ws) as MflpClient
+    const user: Client | undefined = getClientByUsername(connectedClients, body.user)
+    const executor: Client = getClientByWebsocket(connectedClients, ws) as Client
     const message: string | undefined = body.message
 
     switch (cmd) {

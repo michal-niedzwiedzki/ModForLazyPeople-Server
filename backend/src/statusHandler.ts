@@ -1,7 +1,7 @@
 import {Payload} from "./utils"
 import WebSocket from "ws"
-import {MflpClient} from "./Client"
-import {WebsocketWriter} from "./WebsocketWriter"
+import {Client} from "./client/Client"
+import {Writer} from "./server/Writer"
 
 interface StatusBody {
     cmd: string;
@@ -17,7 +17,7 @@ function printRemoved(username: string) {
 }
 
 export function handleStatus(payload: Payload, ws: WebSocket, websocketServer: WebSocket.Server,
-                             connectedClients: Array<MflpClient>, sender: WebsocketWriter) {
+                             connectedClients: Array<Client>, sender: Writer) {
     const body: StatusBody = payload.body as StatusBody
 
     const cmd: string = body.cmd
