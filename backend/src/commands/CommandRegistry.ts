@@ -1,4 +1,5 @@
-import { Command, Payload } from "./Command";
+import { Payload } from "../client";
+import { Command } from "./Command";
 
 export class CommandRegistry {
   private commands: Array<Command> = [];

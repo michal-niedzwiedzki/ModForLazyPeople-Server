@@ -9,17 +9,15 @@
  *    in detail in `Protocol.md`
  */
 
-// Imports
 import WebSocket from "ws"
-import { MflpClient, Payload } from "./client"
-import * as cmd from "./commands"
+
+import { Client, Payload } from "./client"
 import { Errors, State, Writer } from "./server"
+import * as cmd from "./commands"
 
 const server = new WebSocket.Server({ port: 8080 })
 const writer = new Writer(server)
-
 const state = new State()
-
 const registry = new cmd.CommandRegistry()
   .add(new cmd.StatusJoinCommand())
   .add(new cmd.PartyInviteCommand())
@@ -28,15 +26,14 @@ const registry = new cmd.CommandRegistry()
 )
 
 function clientHandshake(ws: WebSocket, username: string) {
-  const generatedKey = state.generateKey(32)
-  const client: MflpClient = {
-    key: generatedKey,
+  const client: Client = {
+    key: state.generateKey(32),
     ws: ws,
     username: username,
-  } as MflpClient
+  }
 
   state.connect(client)
-  writer.send(client.ws, generatedKey)
+  writer.send(client.ws, client.key)
 }
 
 server.on("connection", (ws, request) => {
@@ -47,7 +44,7 @@ server.on("connection", (ws, request) => {
     const usernameJsonData = JSON.parse(
       Array.isArray(username) ? username[0] : username
     )
-    clientHandshake(ws, usernameJsonData.username);
+    clientHandshake(ws, usernameJsonData.username)
   } catch (err) {
     return ws.close(401) // Invalid JSON data in handshake
   }
@@ -56,9 +53,9 @@ server.on("connection", (ws, request) => {
     const payload: Payload = JSON.parse(message)
     if (!state.isValidKey(payload.clientKey)) return writer.error(ws, Errors.INVALID_CLIENT_KEY)
 
-    const command = registry.retrieve(payload);
-    if (command) command.handle(payload, state, ws, writer);
-  });
+    const command = registry.retrieve(payload)
+    if (command) command.handle(payload, state, ws, writer)
+  })
 
   ws.on("close", () => state.disconnect(ws))
 })

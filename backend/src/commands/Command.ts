@@ -1,7 +1,7 @@
-import { Errors, errorToMessage } from "../server/Errors"
-import { State } from "../server/State"
-import { Writer } from "../server/Writer"
 import WebSocket from "ws"
+
+import { Payload } from "../client"
+import { State, Writer } from "../server"
 
 export abstract class Command {
 

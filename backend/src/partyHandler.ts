@@ -1,15 +1,9 @@
-import {
-    generateKey,
-    getClientByUsername,
-    getClientByWebsocket,
-    getClientPermissionLevel,
-    Payload,
-} from "./utils"
 import WebSocket from "ws"
-import {Client} from "./client/Client"
-import {Writer} from "./server/Writer"
 
-let parties: Array<Party> = []
+import { Client, Party } from "./client"
+import { Writer } from "./server"
+import { getClientPermissionLevel } from "./utils"
+
 const partyMap: Map<Client, Party> = new Map<Client, Party>()
 const pendingInvites: Map<Client, Party> = new Map<Client, Party>()
 
@@ -17,13 +11,6 @@ interface PartyBody {
     cmd: string;
     user?: string; // The user you want to invite/kick etc.
     message?: string;
-}
-
-export interface Party {
-    partyId: string; // 16 chars long hexadecimal string
-    owner: Client;
-    moderators: Array<Client>;
-    players: Array<Client>;
 }
 
 function decline(executor: Client, writer: Writer) {

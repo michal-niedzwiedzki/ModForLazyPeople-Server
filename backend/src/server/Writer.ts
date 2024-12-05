@@ -1,7 +1,6 @@
 import WebSocket from "ws"
 
-import { Client } from "../client/Client"
-import { Party } from "../partyHandler"
+import { Client, Party } from "../client"
 import { State } from "./State"
 
 export class Writer {

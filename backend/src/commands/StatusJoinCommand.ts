@@ -1,14 +1,13 @@
 import WebSocket from "ws"
 
-import { Command } from "./Command";
-import { Client, Payload, Feedback } from "../client"
-import { Errors, State, Writer } from "../server";
-
+import { Command } from "./Command"
+import { Payload, Feedback } from "../client"
+import { Errors, State, Writer } from "../server"
 
 export class StatusJoinCommand extends Command {
 
   public canHandle(payload: Payload): boolean {
-    return payload?.type === "STATUS" && payload?.body?.cmd === "CLIENT_JOIN";
+    return payload?.type === "STATUS" && payload?.body?.cmd === "CLIENT_JOIN"
   }
 
   public handle(
@@ -17,14 +16,10 @@ export class StatusJoinCommand extends Command {
     ws: WebSocket,
     writer: Writer
   ): void {
-    writer.broadcastToAll(state, JSON.stringify({
-          header: "SUCCESS",
-          code: "0",
-          type: "STATUS",
-          body: {
-            cmd: "CLIENT_JOIN",
-            client: payload.body.user,
-          }}))
-        }
-       
+    writer.broadcastToAll(state, new Feedback(payload, Errors.SUCCESS, {
+      cmd: "CLIENT_JOIN",
+      client: payload.body.user,
+    }))
+  }
+
 }

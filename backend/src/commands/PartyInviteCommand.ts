@@ -1,9 +1,8 @@
 import WebSocket from "ws"
 
 import { Command } from "./Command";
-import { Client, Payload, Feedback } from "../client"
+import { Client, Payload, Feedback, Party } from "../client"
 import { Errors, State, Writer } from "../server";
-
 
 export class PartyInviteCommand extends Command {
 

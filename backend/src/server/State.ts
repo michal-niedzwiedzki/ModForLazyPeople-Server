@@ -1,12 +1,12 @@
-import { Client } from "../client/Client"
-import { Party } from "../partyHandler"
-import { randomBytes } from "crypto"
 import WebSocket from "ws"
+import { randomBytes } from "crypto"
+
+import { Client, Party } from "../client"
 
 export class State {
   private clients: Array<Client> = []
   private parties: Array<Party> = []
-  private partyMap: Map<Client, Party> = new Map<Client, Party>()
+  private membership: Map<Client, Party> = new Map<Client, Party>()
   private invites: Map<Client, Party> = new Map<Client, Party>()
 
   public generateKey(length: number): string {
@@ -28,6 +28,10 @@ export class State {
     return this
   }
 
+  public getClients(): Array<Client> {
+    return this.clients
+  }
+
   public getClientByWebSocket(ws: WebSocket): Client | undefined {
     return this.clients.find((client) => (client.ws === ws))
   }
@@ -36,8 +40,12 @@ export class State {
     return this.clients.find((client) => (client.username === username))
   }
 
+  public getParties(): Array<Party> {
+    return this.parties
+  }
+
   public hasParty(client: Client | undefined): boolean {
-    return !!client && this.partyMap.has(client)
+    return !!client && this.membership.has(client)
   }
 
   public hasPendingInvite(client: Client | undefined): boolean {
@@ -45,8 +53,28 @@ export class State {
   }
 
   public getInvitingParty(client: Client | undefined) {
-    if (!!client ) return this.invites.get(client)
+    if (!!client) return this.invites.get(client)
     else return undefined
+  }
+
+  public invite(client: Client, party: Party): this {
+    this.invites.set(client, party)
+    return this
+  }
+
+  public uninvite(client: Client): this {
+    this.invites.delete(client)
+    return this
+  }
+
+  public join(client: Client, party: Party): this {
+    this.membership.set(client, party)
+    return this
+  }
+
+  public kick(client: Client): this {
+    this.membership.delete(client)
+    return this
   }
 
 }

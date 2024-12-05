@@ -4,6 +4,7 @@
   "arrowParens": "always",
   "useTabs": false,
   "tabWidth": 2,
+  "endOfLine": "lf",
   "semi": false,
   "plugins": ["@trivago/prettier-plugin-sort-imports"],
   "printWidth": 120,
